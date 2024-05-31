@@ -1,0 +1,18 @@
+package {{ package_name }};
+/**
+* This class represents the {{ class_name }} Tehnique or sub technique in attack matrix
+*/
+public class {{ class_name }} extends {{ extends }} {% if implements %} implements {{ implements }}{% endif %}
+{
+    public {{ class_name }}() {
+        super.name = "{{ name }}";
+        super.domain = "{{ domain }}";
+        super.id = "{{ ID }}";
+        super.url = "{{ url }}";
+        super.version = {{ version }};
+        {% if verbose_class %}
+        super.description = {{ description }};
+        {% endif %}
+    }
+
+}

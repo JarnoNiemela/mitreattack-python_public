@@ -60,6 +60,8 @@ def export(
 
     stixToJava.stixToTactics(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
 
+    stixToJava.stixToTechniques(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
+
     logger.info(f"************ Exporting {domain} to To Java ************")
 
 

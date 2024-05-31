@@ -1,12 +1,9 @@
-public abstract class {{ name }} extends AttackMatrix{
-    public {{ name }}() {
-        super.domain = "{{ domain }}";
-        super.id = "{{ ID }}";
-        super.url = "{{ url }}";
-        super.version = {{ version }};
-        {% if verbose_class %}
-        super.description = {{ description }};
-        {% endif %}
-    }
-
+package {{ package_name }};
+/**
+* This interface represents the {{ class_name }} tactic in the MITRE ATT&CK framework.
+* For each of the tactics, there are techniques that are associated with it which implement an interface for each of the tactics they are associated with.
+* Each tactic also has an Abstract class that represents the tactic itself.
+*/
+interface {{ class_name }} 
+{
 }

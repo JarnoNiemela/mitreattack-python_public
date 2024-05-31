@@ -1,12 +1,17 @@
 package {{ package_name }};
 
 public abstract class AttackMatrix {
+    protected String name;
     protected String domain;
     protected String id;
     protected String url;
     protected String version;
 
     // Getters
+    public String getName() {
+        return domain;
+    }
+
     public String getDomain() {
         return domain;
     }
@@ -23,30 +28,10 @@ public abstract class AttackMatrix {
         return version;
     }
 
-    // Setters
-    public void setDomain(String domain) {
-        this.domain = domain;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public void setVersion(String version) {
-        this.version = version;
-    }
 
     {% if verbose_class %}
     
-    protected String description = "";
-    
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    protected String description = "";    
 
     public String getDescription() {
         return description;

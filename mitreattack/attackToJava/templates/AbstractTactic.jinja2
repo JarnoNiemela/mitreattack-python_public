@@ -1,0 +1,18 @@
+package {{ package_name }};
+/**
+* This abstract class represents the {{ class_name }} in attack matrix and can be used in case there is no technique that fits the description of the attack matrix.
+* Note that despite the name, the class is not an abstract class, and can be instantiated into an object
+*/
+public class Abstract{{ class_name }} extends {{ package_name }}.AttackMatrix implements {{ package_name }}.{{ class_name }}
+    public {{ class_name }}() {
+        super.name = "{{ name }}";
+        super.domain = "{{ domain }}";
+        super.id = "{{ ID }}";
+        super.url = "{{ url }}";
+        super.version = {{ version }};
+        {% if verbose_class %}
+        super.description = {{ description }};
+        {% endif %}
+    }
+
+}
