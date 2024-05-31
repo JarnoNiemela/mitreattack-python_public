@@ -1,0 +1,12 @@
+public abstract class {{ name }} extends AttackMatrix{
+    public {{ name }}() {
+        super.domain = "{{ domain }}";
+        super.id = "{{ ID }}";
+        super.url = "{{ url }}";
+        super.version = {{ version }};
+        {% if verbose_class %}
+        super.description = {{ description }};
+        {% endif %}
+    }
+
+}
