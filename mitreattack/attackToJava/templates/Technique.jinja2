@@ -10,7 +10,12 @@ import {{ package_name }}.tactic.*;
 */
 public class {{ class_name }} extends {{ extends }} {% if implements %} implements {{ implements }}{% endif %}
 {
-    public ArrayList<MitreAttackDatasource> dataSources = new ArrayList<>();
+    protected ArrayList<MitreAttackDatasource> dataSources = new ArrayList<>();
+    protected ArrayList<MitreAttackDefensesBypassed> defencesBypassed = new ArrayList<>();
+
+    {% if verbose_class %}
+    protected String description = "";
+    {% endif %}
 
     public void {{ class_name }}() {
         super.name = "{{ name }}";
@@ -18,13 +23,29 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
         super.id = "{{ ID }}";
         super.url = "{{ url }}";
         super.version = "{{ version }}";
+
         {% if verbose_class %}
+        super.description = {{ description }};
         super.description = {{ description }};
         {% endif %}
 
         {% for item in data_source_keys %}
         dataSources.add(MitreAttackDatasource.{{ item }});
         {% endfor %}
+
+        {% for item in defense_bypassed_keys %}
+        defencesBypassed.add(MitreAttackDefensesBypassed.{{ item }});
+        {% endfor %}        
     }
+
+    public ArrayList<MitreAttackDatasource> getDataSources() {
+        return dataSources;
+    }
+
+    public ArrayList<MitreAttackDefensesBypassed> getDefencesBypassed() {
+        return defencesBypassed;
+    }
+
+
 
 }

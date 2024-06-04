@@ -3,6 +3,7 @@ package {{ package_name }};
 /** Represents critical assert, source code, or data that attacker is trying to reach */
 public enum MitreAttackDatasource {
 
+
   {% for key, value in all_data_sources.items() %}
         {% if not loop.last %}
         {{ key }}("{{ value }}"),
