@@ -6,11 +6,33 @@ from pprint import pprint
 from loguru import logger
 
 import os
+import sys
 import jinja2
 import shutil
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 template_dir = os.path.join(script_dir, "templates")
+
+#Function to remove tautology from the text, that is remove parts of the beginning of the text that are repeated
+#that is WINDOWS_REGISTRY_WINDOWS_REGISTRY_KEY_CREATION should be reduced to WINDOWS_REGISTRY_KEY_CREATION
+def remove_tautology(text: str):
+    text_parts = text.split("_")
+    if len(text_parts) < 2:
+        return text
+
+    #Find the first part that is repeated, going each part alone
+    for i in range(1, len(text_parts)):
+        if text_parts[i] == text_parts[i-1]:
+            return "_".join(text_parts[i:])
+        
+    #Repeat same by combining two parts
+    if len(text_parts) > 4:
+        #Combine two parts and check if they are repeated
+        for i in range(2, len(text_parts)):
+            if text_parts[i] == text_parts[i-2] and text_parts[i-1] == text_parts[i-3]:
+                return "_".join(text_parts[i-1:])
+
+    return text
 
 
 def buildOutputDir(package_name: str, domain: str, output_dir: str = "."):
@@ -32,29 +54,14 @@ def buildOutputDir(package_name: str, domain: str, output_dir: str = "."):
     """
 
 
-    class_tree_base = os.path.join(output_dir, package_name.replace(".", os.sep))
+    package_root_dir = os.path.join(output_dir,"src","main","java", package_name.replace(".", os.sep) )
 
-    #Remove the output directory if it exists
-    if os.path.exists(class_tree_base):
-        shutil.rmtree(class_tree_base)
+    #Remove the output directory if it exists and is other than current dir
+    if output_dir != "." and os.path.exists(output_dir):
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
 
-    os.makedirs(class_tree_base, exist_ok=True)
-
-    #Copy AttackMatrix.java from script directory to output directory using shutil.copyfile
-    attack_matrix_file = "AttackMatrix.jinja2"
-    output_attack_matrix_file = os.path.join(output_dir, package_name.replace(".", os.sep), "AttackMatrix.java")
-
-    fields = {
-        "package_name": package_name,
-    }
-    #Use Jinja2 to load and render the template
-    templateLoader = jinja2.FileSystemLoader(searchpath=template_dir)
-    templateEnv = jinja2.Environment(loader=templateLoader)
-    template = templateEnv.get_template(attack_matrix_file)
-    outputText = template.render(fields)
-    with open(output_attack_matrix_file, "w") as f:
-        logger.info(f"Writing {output_attack_matrix_file}")
-        f.write(outputText)
+    os.makedirs(package_root_dir, exist_ok=True)
 
 def nameToClassName(name: str):
     """Convert a name to a class name
@@ -74,17 +81,51 @@ def nameToClassName(name: str):
     name= name.replace("-", " ")
     name= name.replace("_", " ")
     name= name.replace("/", " ")
+    name= name.replace("(", " ")
+    name= name.replace(")", " ")
     name_parts = name.split(" ")
     
     return "".join([part.capitalize() for part in name_parts])
 
+def writeJinja2Template(templateEnv,template_name: str, output_file: str, fields: dict):
+    """Write a Jinja2 template to a file
+
+    Parameters
+    ----------
+    template_file : str
+        The template file to use
+
+    output_file : str
+        The output file to write to
+
+    fields : dict
+        The fields to use in the template
+    """
+
+    #make sure output path exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    template = templateEnv.get_template(template_name)
+    outputText = template.render(fields)
+
+    #Jinja2 for loop is producing pythonic empty lines so remove lines with something else than newline for empty lines
+    #outputText = "\n".join([line for line in outputText.split("\n") if line.strip() != ""])
+
+    with open(output_file, "w") as f:
+        logger.info(f"Writing {output_file}")
+        f.write(outputText)
+
+
 def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbose_class: bool = False, output_dir: str ="."):
+
+    package_root_dir = os.path.join(output_dir,"src","main","java", package_name.replace(".", os.sep) )
 
     #Add Tactic to the base package name
     domain_bare = domain.replace("-attack", "")
+    root_package_name = package_name
     package_name = f"{package_name}.tactic"
 
-    package_dir = os.path.join(output_dir, package_name.replace(".", os.sep) )
+    package_dir = os.path.join(package_root_dir, "tactic" )
     os.makedirs(package_dir, exist_ok=True)
 
     tactics = stix_data.query([Filter("type", "=", "x-mitre-tactic")])
@@ -102,25 +143,15 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
     for tactic in tactic_rows:
         tactic["domain"]= domain
         tactic["package_name"] = package_name
+        tactic["root_package_name"] = root_package_name
         #Make sure name field does not have spaces and every word is capitalized
         tactic["class_name"] = nameToClassName(tactic["name"])
-        
-        #Write the Tactic as Interface as techniques commonly can be present in multiple tactics
-        template = templateEnv.get_template("Tactic.jinja2")
-        outputText = template.render(tactic)
-        
-        output_file = os.path.join(package_dir, f"{tactic['class_name']}.java")
-        with open(output_file, "w") as f:
-            logger.info(f"Writing {output_file}")
-            f.write(outputText)
 
-        template = templateEnv.get_template("AbstractTactic.jinja2")
-        outputText = template.render(tactic)
-        
-        output_file = os.path.join(package_dir, f"Abstract{tactic['class_name']}.java")
-        with open(output_file, "w") as f:
-            logger.info(f"Writing {output_file}")
-            f.write(outputText)
+        #Write the Tactic as Interface as techniques commonly can be present in multiple tactics
+        writeJinja2Template(templateEnv, "Tactic.jinja2", os.path.join(package_dir,f"{tactic['class_name']}.java"), tactic)
+
+        #Write the GenericTactic to be used in cases when specific technique is not known
+        writeJinja2Template(templateEnv, "GenericTactic.jinja2", os.path.join(package_dir,f"Generic{tactic['class_name']}.java"), tactic)
             
 
 def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_class: bool = False, output_dir: str ="."):
@@ -129,6 +160,8 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
     :param stix_data: MemoryStore or other stix2 DataSource object holding the domain data
     :param domain: domain of ATT&CK stix_data corresponds to, e.g "enterprise-attack"
     """
+
+    package_root_dir = os.path.join(output_dir,"src","main","java", package_name.replace(".", os.sep) )
 
     techniques = stix_data.query([Filter("type", "=", "attack-pattern")])
     techniques =stixToDf.remove_revoked_deprecated(techniques)
@@ -148,6 +181,9 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         ]
     )
     all_sub_techniques = MemoryStore(stix_data=all_sub_techniques)
+
+    all_data_sources = dict()
+    all_defenses_bypassed = dict()
 
     for technique in techniques:
         # get parent technique if sub-technique
@@ -247,32 +283,64 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
 
         pprint(row)
 
+        #Add all data source entries from row to all_data_sources
+        data_source_keys = set()
+        if "data_sources" in row:
+            for data_source in row["data_sources"].split(", "):
+                #convert key value to all uppercase and relace spaces with underscores
+                data_source_key = data_source.upper().replace(" ", "_").replace(":", "_").replace("__", "_")
+                data_source_key= remove_tautology(data_source_key)
+                data_source_keys.add(data_source_key)
+                all_data_sources[data_source_key] = data_source
+        row["data_source_keys"] = data_source_keys
+        
+        defense_bypassed_keys = set()
+        if "defenses_bypassed" in row:
+            for defense_bypassed in row["defenses_bypassed"].split(", "):
+                #convert key value to all uppercase and relace spaces with underscores
+                defense_bypassed_key = defense_bypassed.upper().replace(" ", "_").replace(":", "_").replace("__", "_").replace("-", "_")
+                defense_bypassed_key= remove_tautology(defense_bypassed_key)
+                defense_bypassed_keys.add(defense_bypassed_key)
+                all_defenses_bypassed[defense_bypassed_key] = defense_bypassed
+        row["defense_bypassed_keys"] = defense_bypassed_keys
+        
         technique_rows.append(row)
     
 
+    #Produce data sources enum from the collected data source items
+    templateLoader = jinja2.FileSystemLoader(searchpath=template_dir)
+    templateEnv = jinja2.Environment(loader=templateLoader)
+
+    #split the package name into organization and package name f.ex org.mitre.attack -> org.mitre, attack
+    organization, package_bare = package_name.rsplit(".", 1)
+
+    writeJinja2Template(templateEnv, "pom.jinja2", os.path.join(output_dir,"pom.xml"), {"organization":organization,"package_bare":package_bare})
+
+
+    writeJinja2Template(templateEnv, "AttackMatrix.jinja2", os.path.join(package_root_dir,"AttackMatrix.java"), {"package_name":package_name})
+    writeJinja2Template(templateEnv, "MitreAttackDatasource.jinja2", os.path.join(package_root_dir,"MitreAttackDatasource.java"), {"all_data_sources":all_data_sources,"package_name":package_name})
+    writeJinja2Template(templateEnv, "MitreAttackDefensesBypassed.jinja2", os.path.join(package_root_dir,"MitreAttackDefensesBypassed.java"), {"all_defenses_bypassed":all_defenses_bypassed,"package_name":package_name})
+
     for technique in technique_rows:
+        
         class_package_name = f"{package_name}.technique"
+        class_package_postfix = "technique"
 
         if(technique["is_sub-technique"]):
             class_package_name = f"{package_name}.technique.{technique['parent_name'].lower()}"
+            class_package_postfix = f"technique.{technique['parent_name'].lower()}"
 
-        package_dir = os.path.join(output_dir, class_package_name.replace(".", os.sep) )
+
+        package_dir = os.path.join(package_root_dir, class_package_postfix.replace(".", os.sep) )
         os.makedirs(package_dir, exist_ok=True)
 
         technique["domain"]= domain
-        technique["package_name"] = class_package_name
+        technique["class_package_name"] = class_package_name
+        technique["package_name"] = package_name
 
         #Use Jinja2 to load and render the template
-        templateLoader = jinja2.FileSystemLoader(searchpath=template_dir)
-        templateEnv = jinja2.Environment(loader=templateLoader)
-        
-        template = templateEnv.get_template("Technique.jinja2")
-        outputText = template.render(technique)
-        
-        output_file = os.path.join(package_dir, f"{technique['class_name']}.java")
-        with open(output_file, "w") as f:
-            logger.info(f"Writing {output_file}")
-            f.write(outputText)
+
+        writeJinja2Template(templateEnv, "Technique.jinja2", os.path.join(package_dir,f"{technique['class_name']}.java"), technique)
 
 
 
