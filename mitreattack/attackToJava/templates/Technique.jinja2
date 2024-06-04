@@ -14,7 +14,7 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
     protected ArrayList<MitreAttackDefensesBypassed> defencesBypassed = new ArrayList<>();
 
     {% if verbose_class %}
-    protected String description = "";
+    protected String detection = "";
     {% endif %}
 
     public void {{ class_name }}() {
@@ -25,8 +25,10 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
         super.version = "{{ version }}";
 
         {% if verbose_class %}
-        super.description = {{ description }};
-        super.description = {{ description }};
+        super.description = "{{ description }}";
+            {% if detection %}
+                detection = "{{ detection }}";
+            {% endif %}            
         {% endif %}
 
         {% for item in data_source_keys %}

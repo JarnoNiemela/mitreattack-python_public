@@ -147,6 +147,12 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
         #Make sure name field does not have spaces and every word is capitalized
         tactic["class_name"] = nameToClassName(tactic["name"])
 
+        if "description" in tactic:
+            tactic["description"] = tactic["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+
+        if "detection" in tactic:
+            tactic["detection"] = tactic["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+
         #Write the Tactic as Interface as techniques commonly can be present in multiple tactics
         writeJinja2Template(templateEnv, "Tactic.jinja2", os.path.join(package_dir,f"{tactic['class_name']}.java"), tactic)
 
@@ -304,6 +310,12 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
                 all_defenses_bypassed[defense_bypassed_key] = defense_bypassed
         row["defense_bypassed_keys"] = defense_bypassed_keys
         
+        if "description" in row:
+            row["description"] = row["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+
+        if "detection" in row:
+            row["detection"] = row["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+
         technique_rows.append(row)
     
 
@@ -316,8 +328,7 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
 
     writeJinja2Template(templateEnv, "pom.jinja2", os.path.join(output_dir,"pom.xml"), {"organization":organization,"package_bare":package_bare})
 
-
-    writeJinja2Template(templateEnv, "AttackMatrix.jinja2", os.path.join(package_root_dir,"AttackMatrix.java"), {"package_name":package_name})
+    writeJinja2Template(templateEnv, "AttackMatrix.jinja2", os.path.join(package_root_dir,"AttackMatrix.java"), {"package_name":package_name,"verbose_class":verbose_class})
     writeJinja2Template(templateEnv, "MitreAttackDatasource.jinja2", os.path.join(package_root_dir,"MitreAttackDatasource.java"), {"all_data_sources":all_data_sources,"package_name":package_name})
     writeJinja2Template(templateEnv, "MitreAttackDefensesBypassed.jinja2", os.path.join(package_root_dir,"MitreAttackDefensesBypassed.java"), {"all_defenses_bypassed":all_defenses_bypassed,"package_name":package_name})
 
@@ -337,6 +348,7 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         technique["domain"]= domain
         technique["class_package_name"] = class_package_name
         technique["package_name"] = package_name
+        technique["verbose_class"] = verbose_class
 
         #Use Jinja2 to load and render the template
 

@@ -11,7 +11,7 @@ public class Generic{{ class_name }} extends {{ root_package_name }}.AttackMatri
         super.url = "{{ url }}";
         super.version = "{{ version }}";
         {% if verbose_class %}
-        super.description = {{ description }};
+        super.description = "{{ description }}";
         {% endif %}
     }
 }
