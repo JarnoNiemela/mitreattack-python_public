@@ -13,6 +13,18 @@ import shutil
 script_dir = os.path.dirname(os.path.realpath(__file__))
 template_dir = os.path.join(script_dir, "templates")
 
+
+def runMaven(output_dir: str):
+    """Run Maven to build the Java classes
+
+    Parameters
+    ----------
+    output_dir : str, optional
+        The directory to run Maven in, by default "."
+    """
+    logger.info("Running Maven")
+    os.system(f"mvn -f {output_dir} clean compile package")
+
 #Function to remove tautology from the text, that is remove parts of the beginning of the text that are repeated
 #that is WINDOWS_REGISTRY_WINDOWS_REGISTRY_KEY_CREATION should be reduced to WINDOWS_REGISTRY_KEY_CREATION
 def remove_tautology(text: str):
@@ -34,8 +46,37 @@ def remove_tautology(text: str):
 
     return text
 
+def formatTextToLines(text: str, max_line_length: int = 80):
+    """Format text to lines of max_line_length
 
-def buildOutputDir(package_name: str, domain: str, output_dir: str = "."):
+    Parameters
+    ----------
+    text : str
+        The text to format
+
+    max_line_length : int, optional
+        The maximum line length, by default 80
+
+    Returns
+    -------
+    list
+        The formatted lines
+    """
+
+    lines = []
+    for line in text.split("\n"):
+        while len(line) > max_line_length:
+            #Find the last space before 80 characters
+            last_space = line.rfind(" ", 0, max_line_length)
+            if last_space == -1:
+                last_space = max_line_length
+            lines.append(line[:last_space])
+            line = line[last_space+1:]
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def buildOutputDir(package_name: str = None, output_dir: str = None):
     """
     Build the output directory for the Java classes
 
@@ -43,9 +84,6 @@ def buildOutputDir(package_name: str, domain: str, output_dir: str = "."):
     ----------
     package_name : str
         The name of the package to create the directory for
-
-    domain : str
-        The domain of ATT&CK to download, e.g "enterprise-attack"
 
     Returns
     -------
@@ -83,6 +121,7 @@ def nameToClassName(name: str):
     name= name.replace("/", " ")
     name= name.replace("(", " ")
     name= name.replace(")", " ")
+    name= name.replace("&", " and ")
     name_parts = name.split(" ")
     
     return "".join([part.capitalize() for part in name_parts])
@@ -121,7 +160,6 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
     package_root_dir = os.path.join(output_dir,"src","main","java", package_name.replace(".", os.sep) )
 
     #Add Tactic to the base package name
-    domain_bare = domain.replace("-attack", "")
     root_package_name = package_name
     package_name = f"{package_name}.tactic"
 
@@ -148,10 +186,12 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
         tactic["class_name"] = nameToClassName(tactic["name"])
 
         if "description" in tactic:
-            tactic["description"] = tactic["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            tactic["description_field"] = tactic["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            tactic["description_lines"] = formatTextToLines(tactic["description_field"])
 
         if "detection" in tactic:
-            tactic["detection"] = tactic["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            tactic["detection_field"] = tactic["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            tactic["detection_lines"] = formatTextToLines(tactic["detection_field"])
 
         #Write the Tactic as Interface as techniques commonly can be present in multiple tactics
         writeJinja2Template(templateEnv, "Tactic.jinja2", os.path.join(package_dir,f"{tactic['class_name']}.java"), tactic)
@@ -160,7 +200,7 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
         writeJinja2Template(templateEnv, "GenericTactic.jinja2", os.path.join(package_dir,f"Generic{tactic['class_name']}.java"), tactic)
             
 
-def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_class: bool = False, output_dir: str ="."):
+def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_platforms:dict ,stix_data: MemoryStore,package_name: str, domain , verbose_class: bool = False, output_dir: str ="."):
     """Parse STIX techniques from the given data and write corresponding Java classes
 
     :param stix_data: MemoryStore or other stix2 DataSource object holding the domain data
@@ -168,6 +208,10 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
     """
 
     package_root_dir = os.path.join(output_dir,"src","main","java", package_name.replace(".", os.sep) )
+
+    domain_bare = domain.replace("-attack", "")
+
+    domain_package_dir = os.path.join(package_root_dir, domain_bare )
 
     techniques = stix_data.query([Filter("type", "=", "attack-pattern")])
     techniques =stixToDf.remove_revoked_deprecated(techniques)
@@ -187,9 +231,6 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         ]
     )
     all_sub_techniques = MemoryStore(stix_data=all_sub_techniques)
-
-    all_data_sources = dict()
-    all_defenses_bypassed = dict()
 
     for technique in techniques:
         # get parent technique if sub-technique
@@ -234,16 +275,19 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
             if "x_mitre_data_sources" in technique:
                 row["data sources"] = ", ".join(sorted(technique["x_mitre_data_sources"]))
 
-        row["class_name"] = nameToClassName(technique['name'])
+        row["class_name"] = nameToClassName(f"{domain_bare} {technique['name']}")
+
+        row["extends"] = f"{package_name}.MitreTTP"
 
         # domain specific fields -- enterprise
         if domain == "enterprise-attack":            
             row["is_sub-technique"] = subtechnique
-            row["extends"] = f"{package_name}.AttackMatrix"
+            
             if subtechnique:                
+                parent_name= nameToClassName(f"{domain_bare} {parent['name']}")
                 row["sub-technique of"] = parent["external_references"][0]["external_id"]
-                row["extends"] = f"{package_name}.technique.{nameToClassName(parent['name'])}"
-                row["parent_name"] = nameToClassName(parent['name'])
+                row["extends"] = f"{package_name}.technique.{parent_name}"
+                row["parent_name"] = parent_name
 
             if "x_mitre_system_requirements" in technique:
                 row["system requirements"] = ", ".join(sorted(technique["x_mitre_system_requirements"]))
@@ -294,7 +338,7 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         if "data_sources" in row:
             for data_source in row["data_sources"].split(", "):
                 #convert key value to all uppercase and relace spaces with underscores
-                data_source_key = data_source.upper().replace(" ", "_").replace(":", "_").replace("__", "_")
+                data_source_key = data_source.upper().replace(" ", "_").replace(":", "_").replace("/", "_").replace("__", "_")
                 data_source_key= remove_tautology(data_source_key)
                 data_source_keys.add(data_source_key)
                 all_data_sources[data_source_key] = data_source
@@ -304,17 +348,29 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         if "defenses_bypassed" in row:
             for defense_bypassed in row["defenses_bypassed"].split(", "):
                 #convert key value to all uppercase and relace spaces with underscores
-                defense_bypassed_key = defense_bypassed.upper().replace(" ", "_").replace(":", "_").replace("__", "_").replace("-", "_")
+                defense_bypassed_key = defense_bypassed.upper().replace(" ", "_").replace(":", "_").replace("/", "_").replace("__", "_").replace("-", "_")
                 defense_bypassed_key= remove_tautology(defense_bypassed_key)
                 defense_bypassed_keys.add(defense_bypassed_key)
                 all_defenses_bypassed[defense_bypassed_key] = defense_bypassed
         row["defense_bypassed_keys"] = defense_bypassed_keys
+
+        platform_keys = set()
+        if "platforms" in row:
+            for platform in row["platforms"].split(", "):
+                #convert key value to all uppercase and relace spaces with underscores
+                platform_key = platform.upper().replace(" ", "_").replace(":", "_").replace("/", "_").replace("__", "_").replace("-", "_")
+                platform_key= remove_tautology(platform_key)
+                platform_keys.add(platform_key)
+                all_platforms[platform_key] = platform
+        row["platform_keys"] = platform_keys                
         
         if "description" in row:
-            row["description"] = row["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            row["description_field"] = row["description"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            row["description_lines"] = formatTextToLines(row["description_field"])
 
         if "detection" in row:
-            row["detection"] = row["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            row["detection_field"] = row["detection"].replace("\\", "\\\\").replace('"', "'").replace("\n", "")
+            row["detection_lines"] = formatTextToLines(row["detection_field"])
 
         technique_rows.append(row)
     
@@ -326,10 +382,14 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
     #split the package name into organization and package name f.ex org.mitre.attack -> org.mitre, attack
     organization, package_bare = package_name.rsplit(".", 1)
 
-    writeJinja2Template(templateEnv, "pom.jinja2", os.path.join(output_dir,"pom.xml"), {"organization":organization,"package_bare":package_bare})
+    if domain=="enterprise-attack":
+        #Write common files for all domains when Enterprise domain is being processed
+        writeJinja2Template(templateEnv, "pom.jinja2", os.path.join(output_dir,"pom.xml"), {"organization":organization,"package_bare":package_bare})
+        writeJinja2Template(templateEnv, "MitreTTP.jinja2", os.path.join(package_root_dir,"MitreTTP.java"), {"package_name":package_name,"verbose_class":verbose_class})
 
-    writeJinja2Template(templateEnv, "AttackMatrix.jinja2", os.path.join(package_root_dir,"AttackMatrix.java"), {"package_name":package_name,"verbose_class":verbose_class})
+    #Write or update enums
     writeJinja2Template(templateEnv, "MitreAttackDatasource.jinja2", os.path.join(package_root_dir,"MitreAttackDatasource.java"), {"all_data_sources":all_data_sources,"package_name":package_name})
+    writeJinja2Template(templateEnv, "MitreAttackPlatform.jinja2", os.path.join(package_root_dir,"MitreAttackPlatform.java"), {"all_platforms":all_platforms,"package_name":package_name})
     writeJinja2Template(templateEnv, "MitreAttackDefensesBypassed.jinja2", os.path.join(package_root_dir,"MitreAttackDefensesBypassed.java"), {"all_defenses_bypassed":all_defenses_bypassed,"package_name":package_name})
 
     for technique in technique_rows:
@@ -337,12 +397,12 @@ def stixToTechniques(stix_data: MemoryStore,package_name: str, domain , verbose_
         class_package_name = f"{package_name}.technique"
         class_package_postfix = "technique"
 
-        if(technique["is_sub-technique"]):
+        if(technique.get("is_sub-technique",False)):
             class_package_name = f"{package_name}.technique.{technique['parent_name'].lower()}"
             class_package_postfix = f"technique.{technique['parent_name'].lower()}"
 
 
-        package_dir = os.path.join(package_root_dir, class_package_postfix.replace(".", os.sep) )
+        package_dir = os.path.join(domain_package_dir, class_package_postfix.replace(".", os.sep) )
         os.makedirs(package_dir, exist_ok=True)
 
         technique["domain"]= domain

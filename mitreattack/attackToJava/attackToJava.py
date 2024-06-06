@@ -19,12 +19,11 @@ from mitreattack.attackToJava import stixToJava
 
 
 def export(
-    domain: str = "enterprise-attack",
     version: str = None,
-    output_dir: str = ".",
+    output_dir: str = None,
     remote: str = None,
-    stix_file: str = None,
-    package_name: str = "org.mitre.attack",
+    stix_path: str = None,
+    package_name: str = None,
     verbose_class: bool = False,
     ):
     """Download ATT&CK data from MITRE/CTI and convert it to Java class hierarchy
@@ -51,18 +50,41 @@ def export(
     ValueError
         Raised if both `remote` and `stix_file` are passed
     """
-    if remote and stix_file:
+
+    if not package_name:
+        raise ValueError("Package name needs to be specified")
+
+    if not output_dir:
+        raise ValueError("Output directory needs to be specified")
+    
+    if output_dir == ".":
+        raise ValueError("Output directory cannot be the current directory, as the output directoty will be deleted and recreated. Please specify a valid directory")
+
+    if remote and stix_path:
         raise ValueError("remote and stix_file are mutually exclusive. Please only use one or the other")
     
-    stixToJava.buildOutputDir(package_name=package_name, domain=domain, output_dir=output_dir)
+    all_data_sources = dict()
+    all_defenses_bypassed = dict()
+    all_platforms = dict()
+
+    stixToJava.buildOutputDir(package_name=package_name, output_dir=output_dir)
     
-    mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote, stix_file=stix_file)
+    for domain in ["enterprise-attack", "mobile-attack", "ics-attack"]:
 
-    stixToJava.stixToTactics(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
+        mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote, stix_file=os.path.join(stix_path, f"{domain}.json"))
 
-    stixToJava.stixToTechniques(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
+        stixToJava.stixToTactics(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
+
+        stixToJava.stixToTechniques(all_data_sources,all_defenses_bypassed,all_platforms,stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
 
     logger.info(f"************ Exporting {domain} to To Java ************")
+
+    logger.info(f"************ Running Maven to format and test ************")
+    
+    stixToJava.runMaven(output_dir=output_dir)
+
+
+
 
 
 def main():
@@ -70,13 +92,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Download ATT&CK data from MITRE/CTI and convert it to excel spreadsheets"
     )
-    parser.add_argument(
-        "-domain",
-        type=str,
-        choices=["enterprise-attack", "mobile-attack", "ics-attack"],
-        default="enterprise-attack",
-        help="which domain of ATT&CK to convert",
-    )
+
     parser.add_argument(
         "-version",
         type=str,
@@ -85,7 +101,7 @@ def main():
     parser.add_argument(
         "-output",
         type=str,
-        default=".",
+        required=True,
         help="output directory. If omitted writes to a subfolder of the current directory depending on "
         "the domain and version",
     )
@@ -97,17 +113,17 @@ def main():
         " official ATT&CK Taxii server (cti-taxii.mitre.org)",
     )
     parser.add_argument(
-        "-stix-file",
+        "-stix-path",
         type=str,
         default=None,
-        help="Path to a local STIX file containing ATT&CK data for a domain, by default None",
+        help="Path to a local directory containing downlaoded STIX filse containing ATT&CK data for all supported domains (enterprise,mobile,ICS) by default None",
     )
 
     parser.add_argument(
         "-package",
         type=str,
         default="org.mitre.attack",
-        help="Java package name from which to start the class hierarchy. If omitted, will use the org.mitre.attack followed by domain with '-attack' removed.",
+        help="Java package name from which to start the class hierarchy. If omitted, will use the org.mitre.attack is used",
     )
 
     parser.add_argument(
@@ -117,8 +133,7 @@ def main():
     )       
     args = parser.parse_args()
 
-    export(
-        domain=args.domain, version=args.version, output_dir=args.output, remote=args.remote, stix_file=args.stix_file, package_name=args.package, verbose_class=args.verbose
+    export(version=args.version, output_dir=args.output, remote=args.remote, stix_path=args.stix_path, package_name=args.package, verbose_class=args.verbose
     )
 
 

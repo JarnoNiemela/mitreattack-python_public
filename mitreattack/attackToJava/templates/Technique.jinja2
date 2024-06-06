@@ -7,17 +7,13 @@ import {{ package_name }}.tactic.*;
 
 /**
 * This class represents the {{ class_name }} Tehnique or sub technique in attack matrix
+*
+{{description_lines |safe}}
 */
 public class {{ class_name }} extends {{ extends }} {% if implements %} implements {{ implements }}{% endif %}
 {
-    protected ArrayList<MitreAttackDatasource> dataSources = new ArrayList<>();
-    protected ArrayList<MitreAttackDefensesBypassed> defencesBypassed = new ArrayList<>();
 
-    {% if verbose_class %}
-    protected String detection = "";
-    {% endif %}
-
-    public void {{ class_name }}() {
+    public {{ class_name }}() {
         super.name = "{{ name }}";
         super.domain = "{{ domain }}";
         super.id = "{{ ID }}";
@@ -25,19 +21,23 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
         super.version = "{{ version }}";
 
         {% if verbose_class %}
-        super.description = "{{ description }}";
+        super.description = "{{ description_field }}";
             {% if detection %}
-                detection = "{{ detection }}";
+                detection = "{{ detection_field }}";
             {% endif %}            
         {% endif %}
 
         {% for item in data_source_keys %}
-        dataSources.add(MitreAttackDatasource.{{ item }});
+        super.dataSources.add(MitreAttackDatasource.{{ item }});
         {% endfor %}
 
         {% for item in defense_bypassed_keys %}
-        defencesBypassed.add(MitreAttackDefensesBypassed.{{ item }});
-        {% endfor %}        
+        super.defencesBypassed.add(MitreAttackDefensesBypassed.{{ item }});
+        {% endfor %}   
+
+        {% for item in platform_keys %}
+        super.platforms.add(MitreAttackPlatform.{{ item }});
+        {% endfor %}                
     }
 
     public ArrayList<MitreAttackDatasource> getDataSources() {

@@ -1,0 +1,62 @@
+package {{ package_name }};
+
+import java.util.ArrayList;
+
+public abstract class MitreTTP {
+    protected String name;
+    protected String domain;
+    protected String id;
+    protected String url;
+    protected String version;
+
+    protected ArrayList<MitreAttackDatasource> dataSources = new ArrayList<MitreAttackDatasource>();
+    protected ArrayList<MitreAttackDefensesBypassed> defencesBypassed = new ArrayList<MitreAttackDefensesBypassed>();
+    protected ArrayList<MitreAttackPlatform> platforms = new ArrayList<MitreAttackPlatform>();
+
+    {% if verbose_class %}
+    protected String detection = "";
+    {% endif %}
+
+    // Getters
+    public String getName() {
+        return domain;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public ArrayList<MitreAttackDatasource> getDataSources() {
+        return dataSources;
+    }
+
+    public ArrayList<MitreAttackDefensesBypassed> getDefencesBypassed() {
+        return defencesBypassed;
+    }
+
+    public ArrayList<MitreAttackPlatform> getPlatforms() {
+        return platforms;
+    }
+
+    {% if verbose_class %}
+    
+    protected String description = "";    
+
+    public String getDescription() {
+        return description;
+    }
+
+    {% endif %}
+}
