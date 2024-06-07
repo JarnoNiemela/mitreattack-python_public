@@ -285,9 +285,11 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
             
             if subtechnique:                
                 parent_name= nameToClassName(f"{domain_bare} {parent['name']}")
+                parent_name_bare = nameToClassName(f"{parent['name']}")
                 row["sub-technique of"] = parent["external_references"][0]["external_id"]
-                row["extends"] = f"{package_name}.technique.{parent_name}"
+                row["extends"] = f"{package_name}.{domain_bare}.technique.{parent_name}"
                 row["parent_name"] = parent_name
+                row["parent_name_bare"] = parent_name_bare
 
             if "x_mitre_system_requirements" in technique:
                 row["system requirements"] = ", ".join(sorted(technique["x_mitre_system_requirements"]))
@@ -330,8 +332,6 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
 
         #modify the row dictionary keys so that they do not have spaces, as those can't be used in Jinja2 templates easily
         row = {key.replace(" ", "_"): value for key, value in row.items()}
-
-        pprint(row)
 
         #Add all data source entries from row to all_data_sources
         data_source_keys = set()
@@ -394,12 +394,12 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
 
     for technique in technique_rows:
         
-        class_package_name = f"{package_name}.technique"
+        class_package_name = f"{package_name}.{domain_bare}.technique"
         class_package_postfix = "technique"
 
         if(technique.get("is_sub-technique",False)):
-            class_package_name = f"{package_name}.technique.{technique['parent_name'].lower()}"
-            class_package_postfix = f"technique.{technique['parent_name'].lower()}"
+            class_package_name = f"{package_name}.{domain_bare}.technique.{technique['parent_name_bare'].lower()}"
+            class_package_postfix = f"technique.{technique['parent_name_bare'].lower()}"
 
 
         package_dir = os.path.join(domain_package_dir, class_package_postfix.replace(".", os.sep) )

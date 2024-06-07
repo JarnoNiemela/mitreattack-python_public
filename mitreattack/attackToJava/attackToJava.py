@@ -15,6 +15,7 @@ SUB_CHARACTERS = ["\\", "/"]
 
 from mitreattack.attackToExcel import attackToExcel
 from mitreattack.attackToJava import stixToJava
+from mitreattack.attackToJava import getJavaImports
 
 
 
@@ -71,16 +72,23 @@ def export(
     
     for domain in ["enterprise-attack", "mobile-attack", "ics-attack"]:
 
+        logger.info(f"************ Exporting {domain} to To Java ************")
+
         mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote, stix_file=os.path.join(stix_path, f"{domain}.json"))
 
         stixToJava.stixToTactics(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
 
         stixToJava.stixToTechniques(all_data_sources,all_defenses_bypassed,all_platforms,stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
 
-    logger.info(f"************ Exporting {domain} to To Java ************")
+    logger.info(f"************ Generating import statements for easy use ************")
+
 
     logger.info(f"************ Running Maven to format and test ************")
     
+    with open(os.path.join(output_dir, "imports_example.txt"), "w") as f:
+        for import_line in getJavaImports.getJavaImports(output_dir,package_name):
+            f.write(f"{import_line}\n")
+        
     stixToJava.runMaven(output_dir=output_dir)
 
 
