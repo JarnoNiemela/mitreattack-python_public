@@ -3,6 +3,7 @@
 import argparse
 import os
 from typing import Dict, List
+from sortedcontainers import SortedDict
 
 import pandas as pd
 import requests
@@ -64,9 +65,9 @@ def export(
     if remote and stix_path:
         raise ValueError("remote and stix_file are mutually exclusive. Please only use one or the other")
     
-    all_data_sources = dict()
-    all_defenses_bypassed = dict()
-    all_platforms = dict()
+    all_data_sources = SortedDict()
+    all_defenses_bypassed = SortedDict()
+    all_platforms = SortedDict()
 
     stixToJava.buildOutputDir(package_name=package_name, output_dir=output_dir)
     

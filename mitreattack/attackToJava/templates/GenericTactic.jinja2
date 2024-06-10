@@ -5,7 +5,7 @@ package {{ package_name }};
 {{description_lines |safe}}
 
 */
-public class Generic{{ class_name }} extends {{ root_package_name }}.MitreTTP implements {{ package_name }}.{{ class_name }}
+public class Generic{{ class_name }} extends {{ package_name }}.AbstractTactic implements {{ package_name }}.{{ class_name }}
 {
     public Generic{{ class_name }}() {
         super.name = "{{ name }}";

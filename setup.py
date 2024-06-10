@@ -19,7 +19,8 @@ setuptools.setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "attackToExcel_cli=mitreattack.attackToExcel.attackToExcel:main",
+            "MitreTTP_cli=mitreattack.MitreTTP.MitreTTP:main",
+            "MitreTTP_cli=mitreattack.attackToJava.attackToJava:main",
             "layerExporter_cli=mitreattack.navlayers.layerExporter_cli:main",
             "layerGenerator_cli=mitreattack.navlayers.layerGenerator_cli:main",
             "indexToMarkdown_cli=mitreattack.collections.index_to_markdown:main",

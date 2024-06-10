@@ -35,6 +35,7 @@ other modules in this library under "Additional Modules".
    navlayers
    navlayercore
    attacktoexcel
+   attacktojava
 
 .. toctree::
    :maxdepth: 1

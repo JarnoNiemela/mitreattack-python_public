@@ -4,6 +4,9 @@ from stix2 import Filter, MemoryStore
 
 from pprint import pprint
 from loguru import logger
+from sortedcontainers import SortedDict
+from sortedcontainers import SortedSet
+from sortedcontainers import SortedList
 
 import os
 import sys
@@ -19,8 +22,8 @@ def runMaven(output_dir: str):
 
     Parameters
     ----------
-    output_dir : str, optional
-        The directory to run Maven in, by default "."
+    output_dir : str required
+        The directory to run Maven in
     """
     logger.info("Running Maven")
     os.system(f"mvn -f {output_dir} clean compile package")
@@ -176,7 +179,11 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
     #Use Jinja2 to load and render the template
     templateLoader = jinja2.FileSystemLoader(searchpath=template_dir)
     templateEnv = jinja2.Environment(loader=templateLoader)
-    
+    tactic={}
+    tactic["package_name"] = package_name
+    tactic["root_package_name"] = root_package_name
+    #Write the AbstractTactic.java
+    writeJinja2Template(templateEnv, "AbstractTactic.jinja2", os.path.join(package_dir,"AbstractTactic.java"), tactic)
     
     for tactic in tactic_rows:
         tactic["domain"]= domain
@@ -200,7 +207,7 @@ def stixToTactics(stix_data: MemoryStore, package_name: str, domain: str , verbo
         writeJinja2Template(templateEnv, "GenericTactic.jinja2", os.path.join(package_dir,f"Generic{tactic['class_name']}.java"), tactic)
             
 
-def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_platforms:dict ,stix_data: MemoryStore,package_name: str, domain , verbose_class: bool = False, output_dir: str ="."):
+def stixToTechniques(all_data_sources:SortedDict, all_defenses_bypassed:SortedDict ,all_platforms:SortedDict ,stix_data: MemoryStore,package_name: str, domain , verbose_class: bool = False, output_dir: str ="."):
     """Parse STIX techniques from the given data and write corresponding Java classes
 
     :param stix_data: MemoryStore or other stix2 DataSource object holding the domain data
@@ -334,7 +341,7 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
         row = {key.replace(" ", "_"): value for key, value in row.items()}
 
         #Add all data source entries from row to all_data_sources
-        data_source_keys = set()
+        data_source_keys = SortedSet()
         if "data_sources" in row:
             for data_source in row["data_sources"].split(", "):
                 #convert key value to all uppercase and relace spaces with underscores
@@ -344,7 +351,7 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
                 all_data_sources[data_source_key] = data_source
         row["data_source_keys"] = data_source_keys
         
-        defense_bypassed_keys = set()
+        defense_bypassed_keys = SortedSet()
         if "defenses_bypassed" in row:
             for defense_bypassed in row["defenses_bypassed"].split(", "):
                 #convert key value to all uppercase and relace spaces with underscores
@@ -354,7 +361,7 @@ def stixToTechniques(all_data_sources:dict, all_defenses_bypassed:dict ,all_plat
                 all_defenses_bypassed[defense_bypassed_key] = defense_bypassed
         row["defense_bypassed_keys"] = defense_bypassed_keys
 
-        platform_keys = set()
+        platform_keys = SortedSet()
         if "platforms" in row:
             for platform in row["platforms"].split(", "):
                 #convert key value to all uppercase and relace spaces with underscores
