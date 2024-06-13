@@ -25,7 +25,7 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
             {% if detection %}
                 detection = "{{ detection_field }}";
             {% endif %}            
-        {% endif %}
+
 
         {% for item in data_source_keys %}
         super.dataSources.add(MitreAttackDatasource.{{ item }});
@@ -38,16 +38,8 @@ public class {{ class_name }} extends {{ extends }} {% if implements %} implemen
         {% for item in platform_keys %}
         super.platforms.add(MitreAttackPlatform.{{ item }});
         {% endfor %}                
+
+        {% endif %}        
     }
-
-    public ArrayList<MitreAttackDatasource> getDataSources() {
-        return dataSources;
-    }
-
-    public ArrayList<MitreAttackDefensesBypassed> getDefencesBypassed() {
-        return defencesBypassed;
-    }
-
-
 
 }
