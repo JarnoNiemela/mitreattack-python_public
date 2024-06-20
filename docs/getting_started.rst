@@ -43,6 +43,8 @@ More detailed information and examples about the specific usage of the additiona
    * - `attackToExcel <https://github.com/mitre-attack/mitreattack-python/tree/master/mitreattack/attackToExcel>`_
      - A collection of utilities for converting `ATT&CK STIX data <https://github.com/mitre/cti>`_ to Excel spreadsheets. It also provides access to `Pandas <https://pandas.pydata.org/>`_ DataFrames representing the dataset for use in data analysis. 
      - Further documentation can be found `here <https://mitreattack-python.readthedocs.io/en/126-docs-add-section-to-docs-for-accessing-stix/attacktoexcel.html>`_
+   * - `attackToJava <https://github.com/mitre-attack/mitreattack-python/tree/master/mitreattack/attackToJava>`_
+     - A collection of utilities for converting `ATT&CK STIX data <https://github.com/mitre/cti>`_ to Java class hierarchy.     
    * - `collections <https://github.com/mitre-attack/mitreattack-python/tree/master/mitreattack/collections>`_
      - A set of utilities for working with `ATT&CK Collections and Collection Indexes <https://github.com/center-for-threat-informed-defense/attack-workbench-frontend/blob/master/docs/collections.md>`_. Provides functionalities for converting and summarizing data in collections and collection indexes, as well as generating a collection from a raw stix bundle input. 
      - Further documentation can be found `here <https://mitreattack-python.readthedocs.io/en/126-docs-add-section-to-docs-for-accessing-stix/collections.html>`_.

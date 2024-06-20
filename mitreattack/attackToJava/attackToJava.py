@@ -65,6 +65,14 @@ def export(
     if remote and stix_path:
         raise ValueError("remote and stix_file are mutually exclusive. Please only use one or the other")
     
+    #Verify that if stix path is specified it contains JSONs for all three domains
+    if stix_path:
+        if os.path.exists(os.path.join(stix_path, "enterprise-attack.json")) and os.path.exists(os.path.join(stix_path, "mobile-attack.json")) and os.path.exists(os.path.join(stix_path, "ics-attack.json")):
+            pass
+        else:
+            raise ValueError("""stix_path must contain JSON files for all three domains: enterprise-attack.json, mobile-attack.json, ics-attack.json.
+                             Use download_attack_stix tool to fetch the files""")
+
     all_data_sources = SortedDict()
     all_defenses_bypassed = SortedDict()
     all_platforms = SortedDict()
@@ -75,7 +83,11 @@ def export(
 
         logger.info(f"************ Exporting {domain} to To Java ************")
 
-        mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote, stix_file=os.path.join(stix_path, f"{domain}.json"))
+        if stix_path:
+            #Use local files if stix path is specified
+            mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote, stix_file=os.path.join(stix_path, f"{domain}.json"))
+        else:
+            mem_store = attackToExcel.get_stix_data(domain=domain, version=version, remote=remote)            
 
         stixToJava.stixToTactics(stix_data=mem_store, package_name=package_name, domain=domain, verbose_class=verbose_class,output_dir=output_dir)
 
